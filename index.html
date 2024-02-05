@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Searching with CSS - an experiment</title>
+    <style>
+      ol.search li:not([term *= "xyzzy"]) {
+        display: none;
+      }
+    </style>
+    <style>
+    </style>
+    <style>
+      ol li::after {
+        content: attr(term);
+      }
+    </style>
+  </head>
+  <body>
+    <div><input type="text"> </div>
+    <div>
+      <label><input name="count" type="radio" value="100" checked>100</label>
+      <label><input name="count" type="radio" value="1000">1000</label>
+      <label><input name="count" type="radio" value="10000">10000</label>
+    </div>
+    <div>Searching through <span id="count">0</span> items.</div>
+    <ol>
+    </ol>
+
+    <script>
+      const input = document.querySelector('input');
+      input.addEventListener('change', updateSearch);
+      input.addEventListener('keyup', updateSearch);
+
+      const styleSheet = document.styleSheets[0];
+      const searchRule = styleSheet.cssRules[0];
+      const selectorTemplate = ''+searchRule.selectorText;
+      const searchStyle = ''+searchRule.style.cssText;
+      const list = document.querySelector('ol');
+      //styleSheet.removeRule(searchRule);
+      updateSearch();
+      function updateSearch() {
+        const searchTerm = ''+input.value;
+        list.classList.toggle('search', searchTerm !== '');
+        const selector = selectorTemplate.replace('xyzzy', searchTerm);
+        styleSheet.cssRules[0].selectorText = selector;
+      }
+
+
+      /* create some items to test against */
+      let batchTimer = null;
+      createItems();
+      document.querySelectorAll('input[name=count]').forEach(
+        x => {
+          x.addEventListener('click', () => createItems());
+          x.addEventListener('change', () => createItems());
+        }
+      )
+      function createItems() {
+        const radios = [...document.querySelectorAll('input[name=count]')];
+        const numItems = radios.filter(x => x.checked)[0].value ?? 1000;
+        const items = [];
+        items.push('xyzzy','aaaaa','abcde','abbbb');
+        for (var i of range(0, numItems-items.length)) {
+          const words = [];
+          for (var w of range(0,2+Math.random()*4)) {
+            words.push(Math.floor(1e12*Math.random()).toString(36));
+          }
+          const term = words.join(' ');
+          items.push(term);
+        }
+        //console.log({length: items.length, abcde: items.filter(x => x === 'abcde').length});
+        items.sort((a,b) => a.localeCompare(b));
+        const countSpan = document.querySelector('span#count');
+        let total = 0;
+        if (null != batchTimer) {
+          clearTimeout(batchTimer);
+          batchTimer = null;
+        }
+        [...list.childNodes].forEach(x => x.remove());
+        moveBatch();
+        function moveBatch() {
+          moveItems(items, 1000);
+          if (items.length) {
+            batchTimer = setTimeout(moveBatch, 10);
+          } else {
+            batchTimer = null;
+          }
+        }
+        function moveItems(items, count) {
+          const thisBatch = items.splice(0, count);
+          total += thisBatch.length;
+          countSpan.firstChild.remove();
+          countSpan.append(`${total}`);
+          thisBatch.forEach(x => {
+            list.append(item(x));
+          });
+        }
+      }
+      function item(term) {
+        const result = document.createElement('li');
+        result.setAttribute('term', term);
+        //const parts = [...range(1,term.length)].map(n => term.substring(0,n));
+        //result.setAttribute('term', parts.join(' '));
+        //result.append(document.createTextNode(term));
+        return result;
+      }
+      function* range(start,end, step=1) {
+        const list = document.querySelector('ul');
+        for (var i = start; i < end; i += step) {
+          yield i;
+        }
+      }
+    </script>
+  </body>
+</html>
